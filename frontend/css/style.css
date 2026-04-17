@@ -1,3 +1,61 @@
+/* CSS Variables for Theming */
+:root {
+    /* Light Theme (default) */
+    --bg-primary: #f5f5f5;
+    --bg-secondary: #ffffff;
+    --text-primary: #333333;
+    --text-secondary: #6c757d;
+    --text-muted: #999999;
+    --border-color: #e0e0e0;
+    --header-bg: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    --header-text: #ffffff;
+    --nav-bg: rgba(255, 255, 255, 0.1);
+    --nav-hover: rgba(255, 255, 255, 0.2);
+    --nav-active: #4a90d9;
+    --section-bg: #ffffff;
+    --section-shadow: rgba(0, 0, 0, 0.1);
+    --table-header-bg: #f8f9fa;
+    --table-header-text: #495057;
+    --table-border: #eeeeee;
+    --table-hover: #f8f9fa;
+    --input-bg: #ffffff;
+    --input-border: #dddddd;
+    --input-text: #333333;
+    --code-bg: #f8f9fa;
+    --code-text: #495057;
+    --toast-bg: #ffffff;
+    --toast-text: #333333;
+    --upload-border: #dddddd;
+}
+
+[data-theme="dark"] {
+    --bg-primary: #121212;
+    --bg-secondary: #1e1e1e;
+    --text-primary: #e0e0e0;
+    --text-secondary: #b0b0b0;
+    --text-muted: #666666;
+    --border-color: #333333;
+    --header-bg: linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%);
+    --header-text: #ffffff;
+    --nav-bg: rgba(255, 255, 255, 0.1);
+    --nav-hover: rgba(255, 255, 255, 0.2);
+    --nav-active: #4a90d9;
+    --section-bg: #1e1e1e;
+    --section-shadow: rgba(0, 0, 0, 0.5);
+    --table-header-bg: #2d2d2d;
+    --table-header-text: #e0e0e0;
+    --table-border: #333333;
+    --table-hover: #2d2d2d;
+    --input-bg: #2d2d2d;
+    --input-border: #444444;
+    --input-text: #e0e0e0;
+    --code-bg: #2d2d2d;
+    --code-text: #e0e0e0;
+    --toast-bg: #1e1e1e;
+    --toast-text: #e0e0e0;
+    --upload-border: #444444;
+}
+
 /* Base Styles */
 * {
     margin: 0;
@@ -7,9 +65,10 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-    background-color: #f5f5f5;
-    color: #333;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     line-height: 1.6;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .container {
@@ -20,8 +79,8 @@ body {
 
 /* Header */
 header {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-    color: white;
+    background: var(--header-bg);
+    color: var(--header-text);
     padding: 20px;
     border-radius: 10px;
     margin-bottom: 20px;
@@ -45,9 +104,9 @@ nav {
 }
 
 .nav-btn {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--nav-bg);
     border: none;
-    color: white;
+    color: var(--header-text);
     padding: 10px 20px;
     border-radius: 5px;
     cursor: pointer;
@@ -56,11 +115,37 @@ nav {
 }
 
 .nav-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--nav-hover);
 }
 
 .nav-btn.active {
-    background: #4a90d9;
+    background: var(--nav-active);
+}
+
+/* Header Right Section */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+    background: #ffffff00;
+    border: none;
+    color: var(--header-text);
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.theme-toggle:hover {
+    background: var(--nav-hover);
 }
 
 /* Status Indicator */
@@ -88,12 +173,13 @@ nav {
 
 /* Sections */
 .section {
-    background: white;
+    background: var(--section-bg);
     border-radius: 10px;
     padding: 20px;
     margin-bottom: 20px;
     display: none;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 10px var(--section-shadow);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .section.active {
@@ -102,7 +188,7 @@ nav {
 
 .section h2 {
     margin-bottom: 20px;
-    color: #1a1a2e;
+    color: var(--text-primary);
     border-bottom: 2px solid #4a90d9;
     padding-bottom: 10px;
 }
@@ -166,17 +252,18 @@ table {
 th, td {
     padding: 12px;
     text-align: left;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--table-border);
+    color: var(--text-primary);
 }
 
 th {
-    background: #f8f9fa;
+    background: var(--table-header-bg);
     font-weight: 600;
-    color: #495057;
+    color: var(--table-header-text);
 }
 
 tr:hover {
-    background: #f8f9fa;
+    background: var(--table-hover);
 }
 
 /* Form Styles */
@@ -188,15 +275,17 @@ tr:hover {
     display: block;
     margin-bottom: 5px;
     font-weight: 500;
-    color: #495057;
+    color: var(--text-secondary);
 }
 
 .form-group input {
     width: 100%;
     padding: 10px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--input-border);
     border-radius: 5px;
     font-size: 1rem;
+    background: var(--input-bg);
+    color: var(--input-text);
 }
 
 .form-group input:focus {
@@ -212,7 +301,7 @@ tr:hover {
     align-items: center;
     margin-bottom: 20px;
     padding: 20px;
-    border: 2px dashed #ddd;
+    border: 2px dashed var(--upload-border);
     border-radius: 10px;
 }
 
@@ -223,10 +312,12 @@ tr:hover {
 /* Select Styles */
 select {
     padding: 10px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--input-border);
     border-radius: 5px;
     font-size: 1rem;
     min-width: 200px;
+    background: var(--input-bg);
+    color: var(--input-text);
 }
 
 select:focus {
@@ -305,14 +396,14 @@ select:focus {
 .empty-state {
     text-align: center;
     padding: 40px;
-    color: #6c757d;
+    color: var(--text-secondary);
 }
 
 /* Loading */
 .loading {
     text-align: center;
     padding: 20px;
-    color: #6c757d;
+    color: var(--text-secondary);
 }
 
 /* ========================================
@@ -331,10 +422,10 @@ select:focus {
 }
 
 .toast {
-    background: white;
+    background: var(--toast-bg);
     border-radius: 8px;
     padding: 15px 20px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 20px var(--section-shadow);
     display: flex;
     align-items: center;
     gap: 12px;
@@ -360,7 +451,7 @@ select:focus {
 
 .toast-message {
     flex: 1;
-    color: #333;
+    color: var(--toast-text);
     font-size: 0.9rem;
     line-height: 1.4;
 }
@@ -370,7 +461,7 @@ select:focus {
     border: none;
     font-size: 1.2rem;
     cursor: pointer;
-    color: #999;
+    color: var(--text-muted);
     padding: 0;
     line-height: 1;
     opacity: 0.6;
@@ -428,7 +519,7 @@ select:focus {
 
 .progress-bar-wrapper {
     height: 20px;
-    background: #e9ecef;
+    background: var(--table-header-bg);
     border-radius: 10px;
     overflow: hidden;
     position: relative;
@@ -463,30 +554,30 @@ select:focus {
     display: flex;
     justify-content: space-between;
     font-size: 0.8rem;
-    color: #6c757d;
+    color: var(--text-secondary);
 }
 
 .progress-percentage {
     font-weight: 600;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .progress-details {
-    color: #999;
+    color: var(--text-muted);
 }
 
 .no-progress {
-    color: #ccc;
+    color: var(--text-muted);
     font-style: italic;
 }
 
 /* Code styling in tables */
 td code {
-    background: #f8f9fa;
+    background: var(--code-bg);
     padding: 2px 6px;
     border-radius: 3px;
     font-size: 0.85rem;
-    color: #495057;
+    color: var(--code-text);
 }
 
 /* ========================================
@@ -501,17 +592,19 @@ td code {
 
 /* No data placeholder */
 .no-data {
-    color: #999;
+    color: var(--text-muted);
     font-style: italic;
 }
 
 /* Firmware select dropdown in OTA devices table */
 .firmware-select {
     padding: 6px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--input-border);
     border-radius: 4px;
     font-size: 0.85rem;
     min-width: 150px;
+    background: var(--input-bg);
+    color: var(--input-text);
 }
 
 .firmware-select:focus {
@@ -534,7 +627,7 @@ td code {
 #ota-section h3 {
     margin-top: 30px;
     margin-bottom: 15px;
-    color: #495057;
+    color: var(--text-secondary);
     font-size: 1.1rem;
     border-left: 4px solid #4a90d9;
     padding-left: 10px;
@@ -546,11 +639,13 @@ td code {
 
 .filter-input {
     padding: 10px 15px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--input-border);
     border-radius: 5px;
     font-size: 0.9rem;
     min-width: 300px;
     transition: all 0.3s ease;
+    background: var(--input-bg);
+    color: var(--input-text);
 }
 
 .filter-input:focus {
@@ -560,7 +655,7 @@ td code {
 }
 
 .filter-input::placeholder {
-    color: #999;
+    color: var(--text-muted);
     font-style: italic;
 }
 

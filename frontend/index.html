@@ -18,10 +18,14 @@
                 <button id="nav-firmware" class="nav-btn" onclick="showFirmware()">Firmware</button>
                 <button id="nav-ota" class="nav-btn" onclick="showOtaQueue()">OTA Queue</button>
             </nav>
-            <div class="status-indicator">
-                <span id="mqtt-status" class="status-dot disconnected"></span>
-                <span id="mqtt-status-text">MQTT: Disconnected</span>
-                <span id="websocket-status" class="status-dot disconnected" title="WebSocket Status"></span>
+            <div class="header-right">
+                <button id="theme-toggle" class="theme-toggle" title="Toggle theme">🌙</button>
+                <div class="status-indicator">
+                    <span id="mqtt-status-text">MQTT: Disconnected</span>
+                    <span id="mqtt-status" class="status-dot disconnected"></span>
+                    <span id="ws-status-text">WS:</span>
+                    <span id="websocket-status" class="status-dot disconnected" title="WebSocket Status"></span>
+                </div>
             </div>
         </header>
 
