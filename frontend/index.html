@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT OTA Update Server</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>IoT OTA Update Server</h1>
+            <nav>
+                <button id="nav-dashboard" class="nav-btn active" onclick="showDashboard()">Dashboard</button>
+                <button id="nav-settings" class="nav-btn" onclick="showSettings()">Settings</button>
+                <button id="nav-firmware" class="nav-btn" onclick="showFirmware()">Firmware</button>
+                <button id="nav-ota" class="nav-btn" onclick="showOtaQueue()">OTA Queue</button>
+            </nav>
+            <div class="status-indicator">
+                <span id="mqtt-status" class="status-dot disconnected"></span>
+                <span id="mqtt-status-text">Disconnected</span>
+            </div>
+        </header>
+
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="section active">
+            <h2>Devices</h2>
+            <div class="controls">
+                <button onclick="refreshDevices()" class="btn btn-primary">Refresh Devices</button>
+            </div>
+            <div class="table-container">
+                <table id="devices-table">
+                    <thead>
+                        <tr>
+                            <th>Device ID</th>
+                            <th>Firmware Version</th>
+                            <th>Status</th>
+                            <th>Online</th>
+                            <th>Last Seen</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="devices-body">
+                        <tr><td colspan="6">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Settings Section -->
+        <section id="settings-section" class="section">
+            <h2>MQTT Settings</h2>
+            <form id="mqtt-form" onsubmit="saveMqttConfig(event)">
+                <div class="form-group">
+                    <label for="broker-url">Broker URL/IP:</label>
+                    <input type="text" id="broker-url" name="broker_url" required placeholder="localhost">
+                </div>
+                <div class="form-group">
+                    <label for="broker-port">Port:</label>
+                    <input type="number" id="broker-port" name="broker_port" required placeholder="1883" min="1" max="65535">
+                </div>
+                <div class="form-group">
+                    <label for="mqtt-username">Username (optional):</label>
+                    <input type="text" id="mqtt-username" name="username" placeholder="mqtt_user">
+                </div>
+                <div class="form-group">
+                    <label for="mqtt-password">Password (optional):</label>
+                    <input type="password" id="mqtt-password" name="password" placeholder="mqtt_password">
+                </div>
+                <button type="submit" class="btn btn-primary">Save Configuration</button>
+            </form>
+        </section>
+
+        <!-- Firmware Section -->
+        <section id="firmware-section" class="section">
+            <h2>Firmware Management</h2>
+            <div class="upload-area">
+                <input type="file" id="firmware-file" accept=".bin,.firmware,.hex,.elf">
+                <button onclick="uploadFirmware()" class="btn btn-primary">Upload Firmware</button>
+            </div>
+            <div class="table-container">
+                <table id="firmware-table">
+                    <thead>
+                        <tr>
+                            <th>Filename</th>
+                            <th>Size</th>
+                            <th>MD5 Hash</th>
+                            <th>Uploaded</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="firmware-body">
+                        <tr><td colspan="5">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- OTA Queue Section -->
+        <section id="ota-section" class="section">
+            <h2>OTA Update Queue</h2>
+            <div class="ota-controls">
+                <select id="ota-device-select">
+                    <option value="">Select Device...</option>
+                </select>
+                <select id="ota-firmware-select">
+                    <option value="">Select Firmware...</option>
+                </select>
+                <button onclick="addToOtaQueue()" class="btn btn-primary">Add to Queue</button>
+            </div>
+            <div class="table-container">
+                <table id="ota-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Device ID</th>
+                            <th>Firmware</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ota-body">
+                        <tr><td colspan="6">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/ota.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

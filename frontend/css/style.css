@@ -1,0 +1,316 @@
+/* Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+/* Navigation */
+nav {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.nav-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.nav-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.nav-btn.active {
+    background: #4a90d9;
+}
+
+/* Status Indicator */
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #dc3545;
+}
+
+.status-dot.connected {
+    background: #28a745;
+    box-shadow: 0 0 10px #28a745;
+}
+
+.status-dot.disconnected {
+    background: #dc3545;
+}
+
+/* Sections */
+.section {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    display: none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.section.active {
+    display: block;
+}
+
+.section h2 {
+    margin-bottom: 20px;
+    color: #1a1a2e;
+    border-bottom: 2px solid #4a90d9;
+    padding-bottom: 10px;
+}
+
+/* Controls */
+.controls, .ota-controls {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Buttons */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #4a90d9;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #357abd;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #218838;
+}
+
+/* Tables */
+.table-container {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+}
+
+tr:hover {
+    background: #f8f9fa;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #495057;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #4a90d9;
+    box-shadow: 0 0 5px rgba(74, 144, 217, 0.3);
+}
+
+/* Upload Area */
+.upload-area {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 20px;
+    border: 2px dashed #ddd;
+    border-radius: 10px;
+}
+
+.upload-area input[type="file"] {
+    flex: 1;
+}
+
+/* Select Styles */
+select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+    min-width: 200px;
+}
+
+select:focus {
+    outline: none;
+    border-color: #4a90d9;
+}
+
+/* Status Badges */
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-badge.online {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.offline {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.in_progress {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.status-badge.completed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.failed {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-badge.ready {
+    background: #cce5ff;
+    color: #004085;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    nav {
+        justify-content: center;
+    }
+
+    .status-indicator {
+        justify-content: center;
+    }
+
+    .controls, .ota-controls {
+        flex-direction: column;
+    }
+
+    select {
+        width: 100%;
+    }
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+}
+
+/* Loading */
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #6c757d;
+}

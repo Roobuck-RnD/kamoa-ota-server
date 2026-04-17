@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  ota-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ota-server
+    ports:
+      - "18000:8000"
+    volumes:
+      # Mount local directories for persistence
+      - ./data:/app/backend/data
+      - ./firmware:/app/backend/firmware
+      # Mount .env file for MQTT configuration
+      - ./backend/.env:/app/backend/.env:ro
+    environment:
+      - MQTT_URL=${MQTT_URL:-localhost}
+      - MQTT_PORT=${MQTT_PORT:-1883}
+      - MQTT_USERNAME=${MQTT_USERNAME:-}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
