@@ -81,15 +81,15 @@ async function updateHealthStatus() {
         
         if (health.mqtt_connected) {
             statusDot.className = 'status-dot connected';
-            statusText.textContent = 'Connected';
+            // statusText.textContent = 'Connected';
         } else {
             statusDot.className = 'status-dot disconnected';
-            statusText.textContent = 'Disconnected';
+            // statusText.textContent = 'Disconnected';
         }
     } catch (error) {
         console.error('Health check failed:', error);
         document.getElementById('mqtt-status').className = 'status-dot disconnected';
-        document.getElementById('mqtt-status-text').textContent = 'Error';
+        // document.getElementById('mqtt-status-text').textContent = 'Error';
     }
 }
 
