@@ -11,7 +11,7 @@ from typing import Optional
 from ..storage import get_config, save_config, MqttConfig
 from ..mqtt_client import mqtt_client
 
-router = APIRouter(prefix="/api/config/mqtt", tags=["config"])
+router = APIRouter(prefix="/api/config", tags=["config"])
 
 
 class MqttConfigResponse(BaseModel):
@@ -36,7 +36,7 @@ class MqttReconnectResponse(BaseModel):
     connected: bool
 
 
-@router.get("/", response_model=MqttConfigResponse)
+@router.get("/mqtt", response_model=MqttConfigResponse)
 def get_mqtt_config():
     """Get MQTT configuration (password excluded for security)."""
     config = get_config()
@@ -47,7 +47,7 @@ def get_mqtt_config():
     )
 
 
-@router.post("/")
+@router.post("/mqtt")
 def update_mqtt_config(config: MqttConfigUpdate):
     """
     Update MQTT configuration.
@@ -65,7 +65,7 @@ def update_mqtt_config(config: MqttConfigUpdate):
     return {"message": "Configuration updated successfully"}
 
 
-@router.post("/reconnect", response_model=MqttReconnectResponse)
+@router.post("/mqtt/reconnect", response_model=MqttReconnectResponse)
 def reconnect_mqtt():
     """
     Reconnect MQTT client with current configuration.

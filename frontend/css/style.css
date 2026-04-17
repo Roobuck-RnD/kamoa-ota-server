@@ -488,3 +488,54 @@ td code {
     font-size: 0.85rem;
     color: #495057;
 }
+
+/* ========================================
+   Additional UI Elements
+   ======================================== */
+
+/* Small button variant */
+.btn-small {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
+/* No data placeholder */
+.no-data {
+    color: #999;
+    font-style: italic;
+}
+
+/* Firmware select dropdown in OTA devices table */
+.firmware-select {
+    padding: 6px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    min-width: 150px;
+}
+
+.firmware-select:focus {
+    outline: none;
+    border-color: #4a90d9;
+    box-shadow: 0 0 5px rgba(74, 144, 217, 0.3);
+}
+
+/* Warning button variant */
+.btn-warning {
+    background: #ffc107;
+    color: #333;
+}
+
+.btn-warning:hover {
+    background: #e0a800;
+}
+
+/* Subsection heading in OTA page */
+#ota-section h3 {
+    margin-top: 30px;
+    margin-bottom: 15px;
+    color: #495057;
+    font-size: 1.1rem;
+    border-left: 4px solid #4a90d9;
+    padding-left: 10px;
+}

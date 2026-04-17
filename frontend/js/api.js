@@ -34,7 +34,7 @@ async function apiRequest(endpoint, options = {}) {
  * Devices API
  */
 async function fetchDevices() {
-    return apiRequest('/devices/');
+    return apiRequest('/devices');
 }
 
 async function fetchDevice(deviceId) {
@@ -45,11 +45,11 @@ async function fetchDevice(deviceId) {
  * Config API
  */
 async function fetchMqttConfig() {
-    return apiRequest('/config/mqtt/');
+    return apiRequest('/config/mqtt');
 }
 
 async function updateMqttConfig(config) {
-    return apiRequest('/config/mqtt/', {
+    return apiRequest('/config/mqtt', {
         method: 'POST',
         body: JSON.stringify(config),
     });
@@ -106,11 +106,11 @@ async function uploadFirmwareFile(file) {
  * OTA Queue API
  */
 async function fetchOtaQueue() {
-    return apiRequest('/ota/queue/');
+    return apiRequest('/ota/queue');
 }
 
 async function addToOtaQueue(deviceId, firmwareFilename) {
-    return apiRequest('/ota/queue/', {
+    return apiRequest('/ota/queue', {
         method: 'POST',
         body: JSON.stringify({
             device_id: deviceId,

@@ -10,10 +10,10 @@ from typing import List
 
 from ..storage import get_all_devices, get_device, Device
 
-router = APIRouter(prefix="/api/devices", tags=["devices"])
+router = APIRouter(prefix="/api", tags=["devices"])
 
 
-@router.get("/", response_model=List[Device])
+@router.get("/devices", response_model=List[Device])
 def list_devices():
     """
     List all registered devices with their current status.
@@ -33,7 +33,7 @@ def list_devices():
     return get_all_devices()
 
 
-@router.get("/{device_id}", response_model=Device)
+@router.get("/devices/{device_id}", response_model=Device)
 def get_device_by_id(device_id: str):
     """
     Get detailed information for a single device.

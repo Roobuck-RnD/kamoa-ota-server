@@ -21,7 +21,7 @@ from ..storage import (
     OtaQueueItem
 )
 
-router = APIRouter(prefix="/api/ota/queue", tags=["ota"])
+router = APIRouter(prefix="/api/ota", tags=["ota"])
 
 
 class OtaQueueRequest(BaseModel):
@@ -46,7 +46,7 @@ class OtaQueueStatusUpdate(BaseModel):
     error_message: Optional[str] = None
 
 
-@router.post("/")
+@router.post("/queue")
 def add_to_ota_queue(request: OtaQueueRequest):
     """
     Add a device to the OTA update queue.
@@ -76,7 +76,7 @@ def add_to_ota_queue(request: OtaQueueRequest):
     return queue_item
 
 
-@router.get("/", response_model=List[OtaQueueItem])
+@router.get("/queue", response_model=List[OtaQueueItem])
 def list_queue_items():
     """
     List all OTA queue items.
@@ -87,7 +87,7 @@ def list_queue_items():
     return get_all_queue_items()
 
 
-@router.get("/{queue_id}", response_model=OtaQueueItem)
+@router.get("/queue/{queue_id}", response_model=OtaQueueItem)
 def get_queue_item_by_id(queue_id: int):
     """
     Get a single queue item by ID.
@@ -107,7 +107,7 @@ def get_queue_item_by_id(queue_id: int):
     return item
 
 
-@router.delete("/{queue_id}")
+@router.delete("/queue/{queue_id}")
 def remove_queue_item(queue_id: int):
     """
     Remove an item from the OTA queue.
@@ -126,7 +126,7 @@ def remove_queue_item(queue_id: int):
     return {"message": "Queue item removed successfully"}
 
 
-@router.patch("/{queue_id}/status")
+@router.patch("/queue/{queue_id}/status")
 def update_queue_item_status(queue_id: int, request: OtaQueueStatusUpdate):
     """
     Manually update a queue item's status.

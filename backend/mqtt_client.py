@@ -153,13 +153,57 @@ class MqttClient:
             self._check_and_trigger_ota(device_id)
     
     def _handle_device_status(self, device_id: str, payload: str):
-        """Handle device/status topic - update status and check for OTA."""
-        status = payload.strip().lower()
-        update_device_status(device_id, status)
-        # print(f"Device {device_id} status: {status}")
+        """
+        Handle device/status topic - parse JSON status and update device.
+        
+        The device/status topic sends JSON payload with device status information
+        including operationMode, ipAddress, and other telemetry data.
+        
+        Example payload:
+        {
+            "operationMode": "Charging",
+            "ipAddress": "192.168.3.16",
+            "batteryTemperature": 17,
+            "charging": 1,
+            ...
+        }
+        """
+        operating_mode = None
+        status = None
+        
+        try:
+            # Try to parse as JSON first
+            data = json.loads(payload)
+            
+            # Extract operationMode and ipAddress from JSON status
+            operating_mode = data.get("operationMode") or data.get("operating_mode")
+            ip_address = data.get("ipAddress") or data.get("ip_address")
+            
+            # Update device with parsed info
+            device = update_device_info(device_id)
+            if device:
+                if operating_mode:
+                    device.operating_mode = operating_mode
+                    # Use operationMode as status if no explicit status field
+                    if not device.status:
+                        device.status = operating_mode
+                if ip_address:
+                    device.ip_address = ip_address
+                # Save updated device
+                from .storage import save_device
+                save_device(device)
+            
+            print(f"Device {device_id} status updated: mode={operating_mode}, ip={ip_address}")
+            
+        except json.JSONDecodeError:
+            # Fallback: treat payload as plain text status
+            status = payload.strip().lower()
+            update_device_status(device_id, status)
+            print(f"Device {device_id} status (text): {status}")
         
         # Check if device is ready for OTA and has pending update
-        if status == "ready":
+        # This handles both JSON with "ready" operationMode and plain text "ready"
+        if (operating_mode and operating_mode.lower() == "ready") or (status and status == "ready"):
             self._check_and_trigger_ota(device_id)
     
     def _handle_ota_response(self, device_id: str, payload: str):
@@ -280,7 +324,7 @@ class MqttClient:
         """
         # Construct HTTP URL to firmware file
         # Using localhost:8000 as the server address (adjustable via environment)
-        server_url = os.environ.get("SERVER_URL", "http://localhost:8000")
+        server_url = os.environ.get("SERVER_URL", "http://localhost:18000")
         command = f"{server_url}/firmware/{firmware_filename}"
         topic = f"update/queue/{device_id}"
         self.publish(topic, command, qos=1)
