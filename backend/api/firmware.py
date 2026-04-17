@@ -1,5 +1,11 @@
 """
-Firmware upload and download endpoints.
+Firmware upload, download, and deletion endpoints.
+
+Provides API endpoints for managing firmware files:
+- Upload new firmware binaries
+- List available firmware files
+- Download firmware files
+- Delete firmware files
 """
 import os
 from fastapi import APIRouter, HTTPException, UploadFile, File
@@ -11,6 +17,7 @@ from ..storage import (
     list_firmware,
     get_firmware_path,
     get_firmware_metadata,
+    delete_firmware,
     FirmwareMetadata
 )
 
@@ -53,7 +60,18 @@ def list_firmware_files():
 
 @router.get("/{filename}")
 def download_firmware(filename: str):
-    """Download firmware file."""
+    """
+    Download firmware file.
+    
+    Args:
+        filename: Name of the firmware file to download.
+        
+    Returns:
+        FileResponse: The firmware binary file.
+        
+    Raises:
+        HTTPException: If firmware file not found (404).
+    """
     filepath = get_firmware_path(filename)
     if not filepath:
         raise HTTPException(status_code=404, detail=f"Firmware file {filename} not found")
@@ -63,3 +81,28 @@ def download_firmware(filename: str):
         filename=filename,
         media_type="application/octet-stream"
     )
+
+
+@router.delete("/{filename}")
+def delete_firmware_file(filename: str):
+    """
+    Delete firmware file and metadata.
+    
+    Args:
+        filename: Name of the firmware file to delete.
+        
+    Returns:
+        dict: Success message and filename.
+        
+    Raises:
+        HTTPException: If firmware file not found (404).
+    """
+    success = delete_firmware(filename)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Firmware file {filename} not found")
+    
+    return {
+        "success": True,
+        "message": f"Firmware file {filename} deleted successfully",
+        "filename": filename
+    }

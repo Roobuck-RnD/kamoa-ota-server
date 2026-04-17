@@ -56,10 +56,28 @@ async function updateMqttConfig(config) {
 }
 
 /**
+ * Trigger MQTT reconnection after config change.
+ */
+async function reconnectMqtt() {
+    return apiRequest('/config/mqtt/reconnect', {
+        method: 'POST',
+    });
+}
+
+/**
  * Firmware API
  */
 async function fetchFirmwareList() {
     return apiRequest('/firmware/list');
+}
+
+/**
+ * Delete a firmware file.
+ */
+async function deleteFirmware(filename) {
+    return apiRequest(`/firmware/${filename}`, {
+        method: 'DELETE',
+    });
 }
 
 async function uploadFirmwareFile(file) {
@@ -118,5 +136,5 @@ async function updateOtaQueueStatus(queueId, status, errorMessage = null) {
  * Health Check API
  */
 async function checkHealth() {
-    return apiRequest('/health');
+    return apiRequest('/../health');
 }

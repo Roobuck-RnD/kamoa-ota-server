@@ -1,286 +1,478 @@
 # Implementation Plan
 
-[Overview]
-Build a complete IoT OTA (Over-The-Air) update management system with a FastAPI backend and vanilla JavaScript SPA frontend, containerized with Docker Compose.
+## Overview
+This plan addresses 9 issues and feature requests for the IoT OTA Update Server, including configuration loading logic fixes, MQTT reconnection after config changes, firmware deletion, OTA queue UI refactoring, dashboard display improvements, OTA trigger logic corrections, status indicator documentation, code documentation, and README updates.
 
-This system provides a dashboard to monitor approximately 30 IoT devices, receive their status updates via MQTT, manage firmware files, and trigger OTA updates based on device readiness. The backend subscribes to MQTT topics to track device information and status, stores device data in SQLite, and exposes REST APIs for the frontend. The frontend is a simple single-page application built with vanilla HTML, CSS, and JavaScript that displays device information, allows configuration of MQTT settings, and enables firmware upload and OTA update triggering.
+## Detailed Context
 
-The architecture follows a clean separation of concerns: MQTT client handles broker communication, REST API endpoints serve the frontend, SQLite stores persistent data, and a simple in-memory queue manages OTA update requests.
+The IoT OTA Update Server is a FastAPI-based application with a vanilla JavaScript frontend that manages over-the-air firmware updates for IoT devices via MQTT. The system consists of:
+- Backend: FastAPI with file-based JSON storage
+- Frontend: Single-page application with dashboard, settings, firmware, and OTA queue sections
+- MQTT: paho-mqtt client for device communication
+- WebSocket: Real-time progress updates to connected clients
 
-[Types]
+---
 
-The system uses the following data structures and types:
+## [Overview]
 
-**Device Model**
-- `device_id` (string, primary key): Unique device identifier extracted from MQTT topic (e.g., "0c8b95b851a4")
-- `firmware_version` (string, nullable): Current firmware version from device/info topic
-- `last_seen` (datetime): Timestamp of last received message
-- `is_online` (boolean): Whether device is currently online
-- `status` (string, nullable): Current status message (e.g., "ready" for OTA)
-- `created_at` (datetime): When device was first discovered
-- `updated_at` (datetime): Last update timestamp
+The implementation addresses configuration persistence issues, UI/UX improvements, and documentation enhancements to make the OTA server more robust and user-friendly.
 
-**OtaQueue Model**
-- `id` (integer, primary key): Auto-increment ID
-- `device_id` (string, foreign key): Reference to device
-- `firmware_filename` (string): Name of firmware file to upload
-- `status` (string): "pending", "in_progress", "completed", "failed"
-- `created_at` (datetime): When queued
-- `updated_at` (datetime): Last status update
-- `error_message` (string, nullable): Error details if failed
+### Key Issues to Address
 
-**MqttConfig Model**
-- `broker_url` (string): MQTT broker hostname/IP
-- `broker_port` (integer): MQTT broker port (default 1883)
-- `username` (string, nullable): MQTT username
-- `password` (string, nullable): MQTT password
+1. **Config Loading Logic Bug**: Currently, when the application starts and `config.json` doesn't exist, the code reads from `.env` but immediately saves to `config.json`. This means `.env` is only used once during initial setup, and subsequent `.env` changes are ignored.
 
-**Firmware File**
-- `filename` (string): Original uploaded filename
-- `size` (integer): File size in bytes
-- `uploaded_at` (datetime): Upload timestamp
-- `md5_hash` (string): MD5 checksum for integrity verification
+2. **MQTT Reconnection**: After updating MQTT configuration via the frontend settings panel, the MQTT client should reconnect with the new credentials. Currently, it only saves the config without reconnecting.
 
-[Files]
+3. **Firmware Deletion**: The firmware management page lacks a delete button to remove uploaded firmware files.
 
-**New Files to be Created:**
+4. **OTA Queue UI**: The current UI uses a dropdown to select devices for adding to the queue. This should be refactored to show all devices in a table with per-device "Add to Queue" and "Remove from Queue" buttons.
 
-Backend:
-- `backend/main.py` - FastAPI application entry point with all routes
-- `backend/config.py` - Configuration management with .env support
-- `backend/mqtt_client.py` - MQTT client for subscribing and publishing
-- `backend/database.py` - SQLite database setup and session management
-- `backend/models.py` - SQLAlchemy ORM models (Device, OtaQueue, MqttConfig)
-- `backend/api/devices.py` - Device CRUD endpoints
-- `backend/api/ota.py` - OTA queue and update endpoints
-- `backend/api/config.py` - MQTT configuration endpoints
-- `backend/api/firmware.py` - Firmware upload and download endpoints
-- `backend/services/ota_service.py` - OTA update logic and state machine
-- `backend/services/device_service.py` - Device management logic
-- `backend/.env.example` - Example environment variables
+5. **Dashboard Display**: The dashboard should show only the operating mode and IP address (not the full topic payload). Firmware version should be extracted from the `device/info` topic payload.
 
-Frontend:
-- `frontend/index.html` - Main HTML page
-- `frontend/css/style.css` - Stylesheet
-- `frontend/js/app.js` - Main application logic
-- `frontend/js/api.js` - API client functions
-- `frontend/js/dashboard.js` - Dashboard rendering
-- `frontend/js/settings.js` - Settings panel logic
-- `frontend/js/ota.js` - OTA update logic
+6. **OTA Trigger Logic**: The OTA command should only be sent when a device is in the queue AND sends a "ready" status on the `update/queue/{device_id}` topic.
 
-Infrastructure:
-- `docker-compose.yml` - Docker Compose configuration
-- `Dockerfile.backend` - Backend container definition
-- `Dockerfile.frontend` - Frontend container definition (nginx)
-- `backend/requirements.txt` - Python dependencies
-- `backend/firmware/` - Directory for uploaded firmware files
+7. **Status Indicators**: Document what the red/green status indicators mean (MQTT connection, WebSocket connection).
 
-**Existing Files to be Modified:**
-None (this is a new project)
+8. **Code Documentation**: Add comprehensive comments and docstrings throughout the codebase.
 
-**Configuration Files:**
-- `backend/.env` - Environment variables (generated from .env.example)
-- `backend/config.json` - MQTT configuration (updated via API)
+9. **README Update**: Update the README with accurate information about features, MQTT topics, and usage.
 
-[Functions]
+---
 
-**Backend API Endpoints:**
+## [Types]
 
-`GET /api/devices` - List all devices with current status
-- Returns: Array of Device objects
+New and modified type definitions for the implementation.
 
-`GET /api/devices/{device_id}` - Get single device details
-- Returns: Device object
+### Modified: Device Model (backend/storage.py)
 
-`POST /api/ota/queue` - Add device to OTA update queue
-- Body: { "device_id": "string", "firmware_filename": "string" }
-- Returns: OtaQueue object
+Add new fields to store device information from the `device/info` topic:
 
-`GET /api/ota/queue` - List OTA queue items
-- Returns: Array of OtaQueue objects
-
-`DELETE /api/ota/queue/{queue_id}` - Remove item from OTA queue
-- Returns: Success message
-
-`GET /api/config/mqtt` - Get MQTT configuration
-- Returns: MqttConfig object (without password)
-
-`POST /api/config/mqtt` - Update MQTT configuration
-- Body: { "broker_url": "string", "broker_port": int, "username": "string", "password": "string" }
-- Returns: Success message
-
-`POST /api/firmware/upload` - Upload firmware binary file
-- Body: multipart/form-data with "file" field
-- Returns: { "filename": "string", "size": int, "md5_hash": "string" }
-
-`GET /api/firmware/{filename}` - Download firmware file
-- Returns: Binary file
-
-`GET /api/firmware/list` - List available firmware files
-- Returns: Array of firmware metadata
-
-`GET /health` - Health check endpoint
-- Returns: { "status": "healthy", "mqtt_connected": boolean }
-
-**MQTT Client Functions:**
-
-`MqttClient.__init__(config)` - Initialize MQTT client with configuration
-`MqttClient.connect()` - Connect to MQTT broker
-`MqttClient.subscribe()` - Subscribe to device topics (#)
-`MqttClient.publish(topic, payload, qos=0)` - Publish message to topic
-`MqttClient.disconnect()` - Disconnect from broker
-`_on_message(topic, payload)` - Handle incoming MQTT messages
-`_parse_device_topic(topic)` - Extract device_id and topic_type from topic
-
-**OTA Service Functions:**
-
-`OtaService.process_queue()` - Process pending OTA updates
-`OtaService.check_device_ready(device_id)` - Check if device sent "ready" status
-`OtaService.send_ota_command(device_id, firmware_info)` - Send OTA start command
-`OtaService.handle_ota_response(device_id, status)` - Handle device OTA response
-`OtaService.update_queue_status(queue_id, status, error=None)` - Update queue item status
-
-**Frontend Functions:**
-
-`initApp()` - Initialize application
-`fetchDevices()` - Fetch and display device list
-`renderDeviceTable(devices)` - Render device list as HTML table
-`showSettings()` - Show settings panel
-`saveMqttConfig(config)` - Save MQTT configuration
-`uploadFirmware(file)` - Upload firmware file
-`addToOtaQueue(deviceId, firmwareFile)` - Add device to OTA queue
-`renderOtaQueue(queue)` - Render OTA queue table
-`refreshDevices()` - Refresh device list
-
-[Classes]
-
-**Backend Classes:**
-
-`MqttClient` (backend/mqtt_client.py)
-- Purpose: Async MQTT client wrapper around paho-mqtt
-- Key methods: connect(), subscribe(), publish(), disconnect()
-- Handles: Automatic reconnection, message parsing, topic filtering
-
-`OtaService` (backend/services/ota_service.py)
-- Purpose: Manage OTA update workflow and state machine
-- Key methods: process_queue(), check_device_ready(), send_ota_command(), handle_ota_response()
-- State machine: pending → in_progress → completed/failed
-
-`DeviceService` (backend/services/device_service.py)
-- Purpose: Device management and discovery
-- Key methods: get_or_create_device(), update_device_info(), update_device_status()
-
-**Database Models (SQLAlchemy):**
-
-`Device` (backend/models.py)
-- Fields: device_id, firmware_version, last_seen, is_online, status, created_at, updated_at
-- Relationships: One-to-many with OtaQueue
-
-`OtaQueue` (backend/models.py)
-- Fields: id, device_id, firmware_filename, status, created_at, updated_at, error_message
-- Relationships: Many-to-one with Device
-
-`MqttConfig` (backend/models.py)
-- Fields: id (always 1), broker_url, broker_port, username, password
-
-[Dependencies]
-
-**Backend Dependencies (requirements.txt):**
-```
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
-paho-mqtt==1.6.1
-sqlalchemy==2.0.25
-aiosqlite==0.19.0
-python-dotenv==1.0.1
-pydantic==2.5.3
-python-multipart==0.0.6
+```python
+class Device(BaseModel):
+    device_id: str
+    firmware_version: Optional[str] = None
+    last_seen: str = ""
+    is_online: bool = False
+    status: Optional[str] = None
+    created_at: str = ""
+    updated_at: str = ""
+    # New fields for device info
+    ip_address: Optional[str] = None
+    operating_mode: Optional[str] = None
+    mac_address: Optional[str] = None
+    serial_number: Optional[str] = None
 ```
 
-**Frontend Dependencies:**
-None (vanilla JavaScript, no build tools required)
+### New: DeviceInfo Model (backend/storage.py)
 
-**Docker:**
-- Backend: python:3.11-slim base image
-- Frontend: nginx:alpine base image
+```python
+class DeviceInfo(BaseModel):
+    """Parsed device information from device/info topic."""
+    firmwareVersion: Optional[str] = None
+    firmwareBuildNumber: Optional[str] = None
+    serialNumber: Optional[str] = None
+    macAddress: Optional[str] = None
+    ipAddress: Optional[str] = None
+    dsrcEnabled: Optional[int] = None
+    loraEnabled: Optional[int] = None
+    bleId: Optional[str] = None
+    # ... other fields as needed
+```
 
-[Testing]
+### New: MqttReconnectResponse (backend/api/config.py)
 
-**Manual Testing Approach:**
+```python
+class MqttReconnectResponse(BaseModel):
+    """Response for MQTT reconnection."""
+    success: bool
+    message: str
+    connected: bool
+```
 
-1. **MQTT Connection Test:**
-   - Verify /health endpoint returns mqtt_connected: true
-   - Check logs for successful MQTT subscription
+### New: FirmwareDeleteResponse (backend/api/firmware.py)
 
-2. **Device Discovery Test:**
-   - Publish test message to `{device_id}/device/info` topic
-   - Verify device appears in /api/devices response
+```python
+class FirmwareDeleteResponse(BaseModel):
+    """Response for firmware deletion."""
+    success: bool
+    message: str
+    filename: str
+```
 
-3. **OTA Flow Test:**
-   - Upload firmware file via /api/firmware/upload
-   - Add device to queue via /api/ota/queue
-   - Verify device receives OTA command when "ready" status is sent
-   - Check queue status updates
+---
 
-4. **Configuration Test:**
-   - Update MQTT config via /api/config/mqtt
-   - Verify config persists in config.json
-   - Verify .env values are loaded correctly
+## [Files]
 
-**Test Scenarios:**
-- Device sends device/info with firmware version
-- Device sends device/status with "ready" message
-- Device already in queue when ready (should trigger OTA)
-- Multiple devices in queue (process one at a time)
-- Firmware file upload and download
-- MQTT reconnection after broker restart
+Detailed file modifications and new files to be created.
 
-[Implementation Order]
+### New Files
 
-**Step 1: Backend Foundation**
-1. Create `backend/config.py` with Pydantic settings and .env support
-2. Create `backend/database.py` with SQLite setup and session management
-3. Create `backend/models.py` with SQLAlchemy models (Device, OtaQueue, MqttConfig)
-4. Create `backend/requirements.txt` with dependencies
+1. **backend/api/device_info.py** (NEW)
+   - Purpose: Handle device information parsing and storage
+   - Contains: Device info parsing logic, API endpoints for device details
 
-**Step 2: MQTT Client**
-5. Create `backend/mqtt_client.py` with MqttClient class
-6. Implement topic parsing and message handling
-7. Add handlers for device/info and device/status topics
+### Modified Files
 
-**Step 3: API Endpoints**
-8. Create `backend/api/devices.py` with device CRUD endpoints
-9. Create `backend/api/config.py` with MQTT config endpoints
-10. Create `backend/api/firmware.py` with firmware upload/download endpoints
-11. Create `backend/api/ota.py` with OTA queue endpoints
+1. **backend/storage.py**
+   - Add `ip_address`, `operating_mode` fields to `Device` model
+   - Add `delete_firmware` endpoint support (already exists, verify)
+   - Add device info parsing functions
 
-**Step 4: Services**
-12. Create `backend/services/device_service.py` for device management
-13. Create `backend/services/ota_service.py` for OTA workflow
+2. **backend/mqtt_client.py**
+   - Modify `_handle_device_info` to parse the actual payload format
+   - Add `reconnect()` method to restart MQTT connection
+   - Fix OTA trigger to send to `update/queue/{device_id}` topic
 
-**Step 5: Main Application**
-14. Create `backend/main.py` integrating all components
-15. Add startup/shutdown handlers for MQTT client
-16. Add background task for OTA queue processing
+3. **backend/api/config.py**
+   - Add `reconnect_mqtt()` endpoint that saves config and triggers reconnection
+   - Modify `update_mqtt_config` to return reconnection status
 
-**Step 6: Frontend**
-17. Create `frontend/index.html` with basic structure
-18. Create `frontend/css/style.css` with styling
-19. Create `frontend/js/api.js` with API client functions
-20. Create `frontend/js/app.js` with main application logic
-21. Create `frontend/js/dashboard.js` for device list rendering
-22. Create `frontend/js/settings.js` for settings panel
-23. Create `frontend/js/ota.js` for OTA queue management
+4. **backend/api/firmware.py**
+   - Add `DELETE /api/firmware/{filename}` endpoint
 
-**Step 7: Docker Configuration**
-24. Create `Dockerfile.backend` for backend container
-25. Create `Dockerfile.frontend` for nginx frontend container
-26. Create `docker-compose.yml` with both services
-27. Create `backend/.env.example` with template variables
+5. **backend/api/devices.py**
+   - Add `DELETE /api/devices/{device_id}` endpoint (optional, for cleanup)
 
-**Step 8: Testing and Refinement**
-28. Test MQTT connection and device discovery
-29. Test firmware upload and download
-30. Test OTA queue and update flow
-31. Verify frontend functionality
-32. Test Docker Compose deployment
+6. **backend/main.py**
+   - Include new device_info router if created
+   - Add MQTT reconnection callback
+
+7. **frontend/js/api.js**
+   - Add `deleteFirmware(filename)` function
+   - Add `reconnectMqtt()` function
+   - Add `deleteDevice(deviceId)` function (optional)
+
+8. **frontend/js/settings.js**
+   - Modify `saveMqttConfig` to trigger reconnection after save
+   - Add loading state during reconnection
+
+9. **frontend/js/dashboard.js**
+   - Modify `renderDeviceTable` to show IP and operating mode
+   - Update firmware version display to use parsed data
+
+10. **frontend/js/ota.js**
+    - Refactor OTA queue UI to show all devices with add/remove buttons
+    - Remove device dropdown from OTA controls
+
+11. **frontend/index.html**
+    - Update OTA queue section HTML structure
+    - Add delete button to firmware table
+    - Update dashboard table columns
+
+12. **frontend/css/style.css**
+    - Add styles for new UI elements
+    - Add delete button styles
+
+13. **README.md**
+    - Update feature list
+    - Update MQTT topics documentation
+    - Add status indicators explanation
+    - Update OTA flow documentation
+
+14. **backend/config.py** (optional cleanup)
+   - May need to be consolidated with storage.py config handling
+
+---
+
+## [Functions]
+
+Detailed function modifications and new functions.
+
+### New Functions
+
+#### backend/storage.py
+
+1. **`parse_device_info(payload: str) -> DeviceInfo`**
+   - Purpose: Parse JSON payload from device/info topic
+   - Location: backend/storage.py
+   - Returns: Parsed DeviceInfo object
+
+2. **`update_device_from_info(device_id: str, info: DeviceInfo) -> Device`**
+   - Purpose: Update device record with parsed info
+   - Location: backend/storage.py
+
+#### backend/mqtt_client.py
+
+1. **`reconnect() -> bool`**
+   - Purpose: Disconnect and reconnect MQTT client with current config
+   - Location: backend/mqtt_client.py
+   - Returns: True if reconnection successful
+
+2. **`_handle_device_info(device_id: str, payload: str)`** (MODIFIED)
+   - Purpose: Parse device/info topic with correct field names
+   - Changes: Use `firmwareVersion` (camelCase) from actual payload
+
+#### backend/api/config.py
+
+1. **`reconnect_mqtt()`**
+   - Purpose: Trigger MQTT reconnection after config change
+   - Location: backend/api/config.py
+   - Endpoint: POST /api/config/mqtt/reconnect
+
+#### backend/api/firmware.py
+
+1. **`delete_firmware(filename: str)`**
+   - Purpose: Delete firmware file and metadata
+   - Location: backend/api/firmware.py
+   - Endpoint: DELETE /api/firmware/{filename}
+
+#### frontend/js/api.js
+
+1. **`deleteFirmware(filename)`**
+   - Purpose: API call to delete firmware
+   - Location: frontend/js/api.js
+
+2. **`reconnectMqtt()`**
+   - Purpose: API call to trigger MQTT reconnection
+   - Location: frontend/js/api.js
+
+3. **`toggleDeviceInQueue(deviceId, firmwareFilename, inQueue)`**
+   - Purpose: Add or remove device from OTA queue
+   - Location: frontend/js/api.js
+
+#### frontend/js/settings.js
+
+1. **`saveMqttConfig(event)`** (MODIFIED)
+   - Changes: Call `reconnectMqtt()` after successful save
+   - Show loading state during reconnection
+
+#### frontend/js/dashboard.js
+
+1. **`renderDeviceTable(devices)`** (MODIFIED)
+   - Changes: Display IP address and operating mode columns
+   - Remove full status payload display
+
+#### frontend/js/ota.js
+
+1. **`renderDevicesForOta(devices)`**
+   - Purpose: Render devices table with add/remove queue buttons
+   - Location: frontend/js/ota.js
+
+2. **`toggleDeviceInQueue(deviceId, firmwareFilename)`**
+   - Purpose: Handle add/remove from queue button click
+   - Location: frontend/js/ota.js
+
+### Modified Functions
+
+#### backend/storage.py
+
+1. **`get_config()`** (MODIFIED)
+   - Current behavior: Creates config.json from .env on first run
+   - New behavior: Always check .env as fallback, don't overwrite config.json unnecessarily
+   - Changes: Remove auto-save to config.json in `_init_config_from_env()`
+
+2. **`_init_config_from_env()`** (MODIFIED)
+   - Changes: Only return config from .env, don't save to config.json
+
+#### backend/mqtt_client.py
+
+1. **`send_ota_command(device_id: str, firmware_filename: str)`** (MODIFIED)
+   - Current: Sends to `update/queue/{device_id}` with JSON payload
+   - Required: Send HTTP URL to firmware (e.g., `http://server/firmware/file.bin`)
+   - Changes: Construct full firmware URL and send as plain text
+
+2. **`_handle_device_status()`** (MODIFIED)
+   - Changes: Check for "ready" status on `update/queue/{device_id}` topic specifically
+
+---
+
+## [Classes]
+
+Class modifications for the implementation.
+
+### Modified: MqttClient (backend/mqtt_client.py)
+
+Add methods:
+- `reconnect()`: Disconnect and reconnect with current config
+- Modify `send_ota_command()` to send HTTP URL instead of JSON
+
+### Modified: Device (backend/storage.py)
+
+Add fields:
+- `ip_address: Optional[str]`
+- `operating_mode: Optional[str]`
+- `mac_address: Optional[str]`
+
+---
+
+## [Dependencies]
+
+No new dependencies required. All changes use existing packages:
+- FastAPI (backend)
+- paho-mqtt (MQTT client)
+- pydantic (data models)
+- Vanilla JavaScript (frontend)
+
+---
+
+## [Testing]
+
+Testing approach for each feature.
+
+### Unit Tests (if test framework exists)
+
+1. **Config Loading Tests**
+   - Test `.env` fallback when `config.json` missing
+   - Test `config.json` takes precedence over `.env`
+
+2. **MQTT Reconnection Tests**
+   - Test `reconnect()` method creates new connection
+   - Test config is reloaded before reconnect
+
+3. **Device Info Parsing Tests**
+   - Test parsing of actual device/info payload format
+   - Test extraction of firmwareVersion, ipAddress, etc.
+
+### Manual Testing Checklist
+
+1. **Configuration**
+   - [ ] Start server with only `.env` file - should work
+   - [ ] Change `.env` and restart - changes should be picked up
+   - [ ] Update config via UI - should save and reconnect MQTT
+   - [ ] Verify MQTT status indicator updates after reconnection
+
+2. **Firmware Management**
+   - [ ] Upload firmware file
+   - [ ] Click delete button - file should be removed
+   - [ ] Verify file removed from filesystem and index
+
+3. **OTA Queue**
+   - [ ] View devices table on OTA page
+   - [ ] Click "Add to Queue" - device added to queue
+   - [ ] Button changes to "Remove from Queue"
+   - [ ] Click "Remove from Queue" - device removed
+
+4. **Dashboard**
+   - [ ] Device table shows IP address column
+   - [ ] Device table shows operating mode column
+   - [ ] Firmware version comes from device/info topic
+
+5. **OTA Trigger**
+   - [ ] Device in queue sends "ready" on update/queue/{id}
+   - [ ] Server sends HTTP URL to device
+   - [ ] Progress updates via WebSocket
+
+---
+
+## [Implementation Order]
+
+Step-by-step implementation sequence to minimize conflicts.
+
+### Phase 1: Configuration Fixes (Tasks 1 & 2)
+
+1. **Fix config loading logic in `backend/storage.py`**
+   - Modify `_init_config_from_env()` to not auto-save
+   - Modify `get_config()` to use `.env` as true fallback
+
+2. **Add MQTT reconnection functionality**
+   - Add `reconnect()` method to `MqttClient` class
+   - Add `POST /api/config/mqtt/reconnect` endpoint
+   - Update frontend `saveMqttConfig()` to trigger reconnection
+
+### Phase 2: Firmware Deletion (Task 3)
+
+3. **Add delete firmware endpoint**
+   - Add `DELETE /api/firmware/{filename}` to `backend/api/firmware.py`
+   - Add `deleteFirmware()` to `frontend/js/api.js`
+
+4. **Update firmware UI**
+   - Add delete button to firmware table in `frontend/index.html`
+   - Add delete handler in `frontend/js/ota.js`
+
+### Phase 3: OTA Queue Refactor (Task 4)
+
+5. **Refactor OTA queue UI**
+   - Modify `frontend/index.html` OTA section
+   - Create devices table with add/remove buttons
+   - Remove device dropdown
+
+6. **Update OTA JavaScript**
+   - Modify `frontend/js/ota.js` to handle new UI
+   - Add `toggleDeviceInQueue()` function
+
+### Phase 4: Dashboard Improvements (Task 5)
+
+7. **Update device info parsing**
+   - Modify `_handle_device_info()` in `backend/mqtt_client.py`
+   - Parse `firmwareVersion`, `ipAddress` from payload
+   - Update `Device` model in `backend/storage.py`
+
+8. **Update dashboard display**
+   - Modify `renderDeviceTable()` in `frontend/js/dashboard.js`
+   - Show IP and operating mode columns
+
+### Phase 5: OTA Trigger Logic (Task 6)
+
+9. **Fix OTA command sending**
+   - Modify `send_ota_command()` to send HTTP URL
+   - Ensure topic is `update/queue/{device_id}`
+
+### Phase 6: Documentation (Tasks 7, 8, 9)
+
+10. **Add code comments**
+    - Add docstrings to all functions
+    - Add inline comments for complex logic
+
+11. **Update README**
+    - Add status indicators explanation
+    - Update MQTT topics documentation
+    - Update feature list
+
+12. **Final testing and verification**
+
+---
+
+## Status Indicators Explanation
+
+### Header Status Indicators
+
+The header displays two status indicators (colored dots):
+
+| Indicator | Color | Meaning |
+|-----------|-------|---------|
+| MQTT Status | Green | Successfully connected to MQTT broker |
+| MQTT Status | Red | Disconnected from MQTT broker or connection failed |
+| WebSocket Status | Green | WebSocket connection to frontend is active |
+| WebSocket Status | Red | WebSocket connection is disconnected |
+
+### Device Status Badges
+
+| Status | Color | Meaning |
+|--------|-------|---------|
+| Online | Green | Device has recently communicated via MQTT |
+| Offline | Red | Device has not communicated recently |
+| Ready | Blue | Device is ready for OTA update |
+| Pending | Yellow | OTA update is queued, waiting for device |
+| In Progress | Cyan | OTA update is currently in progress |
+| Completed | Green | OTA update completed successfully |
+| Failed | Red | OTA update failed |
+
+---
+
+## MQTT Topics Reference
+
+### Subscribed Topics (Server listens)
+
+| Topic Pattern | Description | Payload Format |
+|---------------|-------------|----------------|
+| `#` | All topics (wildcard) | Varies |
+| `{device_id}/device/info` | Device information | JSON with firmwareVersion, ipAddress, etc. |
+| `{device_id}/device/status` | Device operational status | Plain text: "ready", "online", etc. |
+| `{device_id}/update/queue` | Device ready for OTA | Plain text: "ready" |
+| `{device_id}/update/otaStatus` | OTA progress update | JSON with progress, finished, reason |
+
+### Published Topics (Server sends)
+
+| Topic | Description | Payload |
+|-------|-------------|---------|
+| `update/queue/{device_id}` | OTA start command | HTTP URL to firmware file |
+
+---
+
+## Notes
+
+- The `config.json` file is stored in `backend/data/config.json`
+- The `.env` file is stored in `backend/.env`
+- Firmware files are stored in `backend/firmware/`
+- Device data is stored in `backend/data/devices.json`
+- OTA queue is stored in `backend/data/ota_queue.json`

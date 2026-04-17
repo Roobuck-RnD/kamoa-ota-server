@@ -14,12 +14,12 @@ async function loadMqttConfig() {
         document.getElementById('mqtt-username').value = config.username || '';
         document.getElementById('mqtt-password').value = ''; // Don't show password
     } catch (error) {
-        showError('Failed to load MQTT config: ' + error.message);
+        showToast('Failed to load MQTT config: ' + error.message, ToastType.ERROR);
     }
 }
 
 /**
- * Save MQTT configuration.
+ * Save MQTT configuration and trigger reconnection.
  */
 async function saveMqttConfig(event) {
     event.preventDefault();
@@ -32,13 +32,27 @@ async function saveMqttConfig(event) {
     };
     
     try {
+        // Save configuration
         await updateMqttConfig(config);
-        showSuccess('MQTT configuration saved successfully!');
+        showToast('MQTT configuration saved. Reconnecting...', ToastType.SUCCESS);
+        
+        // Trigger MQTT reconnection
+        try {
+            const reconnectResult = await reconnectMqtt();
+            if (reconnectResult.connected) {
+                showToast('MQTT reconnection successful!', ToastType.SUCCESS);
+            } else {
+                showToast('MQTT reconnection failed. Check broker settings.', ToastType.WARNING);
+            }
+        } catch (reconnectError) {
+            console.error('Reconnection error:', reconnectError);
+            showToast('MQTT reconnection failed: ' + reconnectError.message, ToastType.WARNING);
+        }
         
         // Refresh health status after config change
         updateHealthStatus();
     } catch (error) {
-        showError('Failed to save config: ' + error.message);
+        showToast('Failed to save config: ' + error.message, ToastType.ERROR);
     }
 }
 
@@ -46,7 +60,14 @@ async function saveMqttConfig(event) {
  * Show success message.
  */
 function showSuccess(message) {
-    alert(message);
+    showToast(message, ToastType.SUCCESS);
+}
+
+/**
+ * Show error message.
+ */
+function showError(message) {
+    showToast(message, ToastType.ERROR);
 }
 
 /**

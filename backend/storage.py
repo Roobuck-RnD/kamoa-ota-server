@@ -47,6 +47,7 @@ def _now_iso() -> str:
 # ==================== Device Storage ====================
 
 class Device(BaseModel):
+    """Represents an IoT device tracked by the OTA server."""
     device_id: str
     firmware_version: Optional[str] = None
     last_seen: str = ""
@@ -54,6 +55,11 @@ class Device(BaseModel):
     status: Optional[str] = None
     created_at: str = ""
     updated_at: str = ""
+    # Additional device information from device/info topic
+    ip_address: Optional[str] = None
+    operating_mode: Optional[str] = None
+    mac_address: Optional[str] = None
+    serial_number: Optional[str] = None
 
 
 def get_all_devices() -> List[Device]:
@@ -170,7 +176,11 @@ def add_to_queue(device_id: str, firmware_filename: str) -> OtaQueueItem:
     )
     
     items.append(item)
-    _save_json(OTA_QUEUE_FILE, items)
+    
+    # NAPRAWA: Zamieniamy całą listę obiektów na listę słowników przed zapisem
+    items_to_save = [i.dict() for i in items] # lub i.model_dump() w Pydantic v2
+    _save_json(OTA_QUEUE_FILE, items_to_save)
+    
     return item
 
 
@@ -220,8 +230,15 @@ class FirmwareMetadata(BaseModel):
 def get_firmware_index() -> Dict[str, FirmwareMetadata]:
     """Get firmware index (filename -> metadata)."""
     data = _load_json(FIRMWARE_INDEX_FILE, {})
-    return {k: FirmwareMetadata(**v) for k, v in data.items()}
-
+    index = {}
+    for k, v in data.items():
+        # Naprawa: Jeśli v to słownik, parsujemy. Jeśli str (stary błąd), pomijamy.
+        if isinstance(v, dict):
+            try:
+                index[k] = FirmwareMetadata(**v)
+            except Exception:
+                continue
+    return index
 
 def list_firmware() -> List[FirmwareMetadata]:
     """List all firmware files."""
@@ -249,9 +266,13 @@ def save_firmware_file(filename: str, content: bytes) -> FirmwareMetadata:
         md5_hash=md5_hash
     )
     
-    index = get_firmware_index()
-    index[filename] = metadata
-    _save_json(FIRMWARE_INDEX_FILE, index)
+    # Pobieramy aktualny indeks (jako słownik słowników)
+    data = _load_json(FIRMWARE_INDEX_FILE, {})
+    
+    # ZMIANA: Zapisujemy słownik (dict), a nie surowy obiekt metadata
+    data[filename] = metadata.dict() 
+    
+    _save_json(FIRMWARE_INDEX_FILE, data)
     
     return metadata
 
@@ -270,10 +291,11 @@ def delete_firmware(filename: str) -> bool:
     if filepath.exists():
         filepath.unlink()
     
-    index = get_firmware_index()
-    if filename in index:
-        del index[filename]
-        _save_json(FIRMWARE_INDEX_FILE, index)
+    # Pobieramy surowe dane, usuwamy i zapisujemy
+    data = _load_json(FIRMWARE_INDEX_FILE, {})
+    if filename in data:
+        del data[filename]
+        _save_json(FIRMWARE_INDEX_FILE, data)
         return True
     return False
 
@@ -287,8 +309,81 @@ class MqttConfig(BaseModel):
     password: Optional[str] = None
 
 
+# ==================== OTA Progress Tracking ====================
+
+class OtaProgress(BaseModel):
+    """Track OTA progress for a device."""
+    device_id: str
+    queue_id: int
+    progress: int  # bytes transferred
+    finished: int  # 0 = in progress, 1 = finished
+    reason: str    # "begin", "progress", "finished"
+    firmware_filename: str
+    firmware_size: int
+    percentage: float
+    timestamp: str
+
+
+# In-memory storage for OTA progress (cleared on restart)
+_ota_progress_cache: dict[str, OtaProgress] = {}
+
+
+def get_ota_progress(device_id: str) -> Optional[OtaProgress]:
+    """Get current OTA progress for a device."""
+    return _ota_progress_cache.get(device_id)
+
+
+def update_ota_progress(
+    device_id: str,
+    queue_id: int,
+    progress: int,
+    finished: int,
+    reason: str,
+    firmware_filename: str,
+    firmware_size: int
+) -> OtaProgress:
+    """Update OTA progress from MQTT message."""
+    percentage = (progress / firmware_size * 100) if firmware_size > 0 else 0
+    percentage = min(100.0, percentage)  # Cap at 100%
+    
+    ota_progress = OtaProgress(
+        device_id=device_id,
+        queue_id=queue_id,
+        progress=progress,
+        finished=finished,
+        reason=reason,
+        firmware_filename=firmware_filename,
+        firmware_size=firmware_size,
+        percentage=percentage,
+        timestamp=_now_iso()
+    )
+    
+    _ota_progress_cache[device_id] = ota_progress
+    return ota_progress
+
+
+def clear_ota_progress(device_id: str) -> None:
+    """Clear OTA progress when OTA completes."""
+    if device_id in _ota_progress_cache:
+        del _ota_progress_cache[device_id]
+
+
+def get_all_ota_progress() -> list[OtaProgress]:
+    """Get all active OTA progress entries."""
+    return list(_ota_progress_cache.values())
+
+
 def _init_config_from_env() -> MqttConfig:
-    """Initialize config from .env file if config.json doesn't exist."""
+    """
+    Initialize config from .env file environment variables.
+    
+    This function reads MQTT configuration from environment variables
+    set by the .env file. It does NOT save to config.json - that is
+    only done when the user explicitly saves configuration via the UI.
+    
+    Returns:
+        MqttConfig: Configuration object populated from environment variables.
+    """
     import os
     
     config = MqttConfig(
@@ -298,23 +393,37 @@ def _init_config_from_env() -> MqttConfig:
         password=os.environ.get("MQTT_PASSWORD") or None
     )
     
-    # Save to config.json for persistence
-    save_config(config)
+    # Do NOT save to config.json here - only return the config
+    # This allows .env changes to be picked up on each restart
     return config
 
 
 def get_config() -> MqttConfig:
-    """Get MQTT configuration."""
-    if not CONFIG_FILE.exists():
-        return _init_config_from_env()
+    """
+    Get MQTT configuration from config.json or fallback to .env.
     
-    data = _load_json(CONFIG_FILE, {
-        "broker_url": "localhost",
-        "broker_port": 1883,
-        "username": None,
-        "password": None
-    })
-    return MqttConfig(**data)
+    Configuration loading priority:
+    1. If config.json exists, load from there (user-saved configuration)
+    2. If config.json doesn't exist, load from .env environment variables
+    
+    This ensures that .env changes are respected on restart when no
+    config.json exists, and user-saved config.json is preserved.
+    
+    Returns:
+        MqttConfig: Current MQTT configuration.
+    """
+    if CONFIG_FILE.exists():
+        # Load from user-saved config.json
+        data = _load_json(CONFIG_FILE, {
+            "broker_url": "localhost",
+            "broker_port": 1883,
+            "username": None,
+            "password": None
+        })
+        return MqttConfig(**data)
+    else:
+        # Fallback to .env environment variables (do not auto-save)
+        return _init_config_from_env()
 
 
 def save_config(config: MqttConfig) -> None:

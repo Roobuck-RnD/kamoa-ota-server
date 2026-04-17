@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi.responses import FileResponse
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -18,6 +18,9 @@ from backend.api.ota import router as ota_router
 
 # Import MQTT client
 from backend.mqtt_client import mqtt_client
+
+# Import WebSocket manager
+from backend.websocket_manager import websocket_manager
 
 
 @asynccontextmanager
@@ -63,6 +66,35 @@ def health_check():
         "status": "healthy",
         "mqtt_connected": mqtt_client.is_connected()
     }
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for real-time OTA progress updates."""
+    await websocket_manager.connect(websocket)
+    
+    try:
+        # Send initial connection confirmation
+        await websocket.send_json({
+            "type": "connected",
+            "message": "WebSocket connected successfully"
+        })
+        
+        # Keep the connection alive
+        while True:
+            # Wait for messages from client (ping/pong)
+            try:
+                data = await websocket.receive_text()
+                # Echo back or handle client messages if needed
+                print(f"WebSocket received: {data}")
+            except Exception:
+                break
+                
+    except WebSocketDisconnect:
+        await websocket_manager.disconnect(websocket)
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        await websocket_manager.disconnect(websocket)
 
 
 # Serve firmware files statically

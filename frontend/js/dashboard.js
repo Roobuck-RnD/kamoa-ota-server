@@ -1,5 +1,7 @@
 /**
  * Dashboard rendering and device management.
+ * 
+ * Handles displaying connected IoT devices with their status information.
  */
 
 let devicesData = [];
@@ -11,36 +13,33 @@ async function refreshDevices() {
     try {
         devicesData = await fetchDevices();
         renderDeviceTable(devicesData);
-        updateDeviceSelect(devicesData);
     } catch (error) {
-        showError('Failed to fetch devices: ' + error.message);
+        // showToast('Failed to fetch devices: ' + error.message, ToastType.ERROR);
         renderDeviceTable([]);
     }
 }
 
 /**
- * Render device table.
+ * Render device table with all device information.
+ * Displays: Device ID, IP Address, Firmware Version, Operating Mode, Status, Online, Last Seen
+ * @param {Array} devices - List of device objects.
  */
 function renderDeviceTable(devices) {
     const tbody = document.getElementById('devices-body');
     
     if (!devices || devices.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No devices found. Devices will appear here when they connect via MQTT.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No devices found. Devices will appear here when they connect via MQTT.</td></tr>';
         return;
     }
     
     tbody.innerHTML = devices.map(device => `
         <tr>
             <td><code>${escapeHtml(device.device_id)}</code></td>
-            <td>${escapeHtml(device.firmware_version || 'N/A')}</td>
-            <td>${renderStatusBadge(device.status)}</td>
+            <td>${device.ip_address ? escapeHtml(device.ip_address) : '<span class="no-data">-</span>'}</td>
+            <td>${device.firmware_version ? escapeHtml(device.firmware_version) : '<span class="no-data">-</span>'}</td>
+            <td>${device.operating_mode ? escapeHtml(device.operating_mode) : '<span class="no-data">-</span>'}</td>
             <td>${renderOnlineBadge(device.is_online)}</td>
             <td>${formatDateTime(device.last_seen)}</td>
-            <td>
-                <button class="btn btn-primary" onclick="quickAddToQueue('${device.device_id}')">
-                    Add to OTA
-                </button>
-            </td>
         </tr>
     `).join('');
 }
@@ -66,32 +65,12 @@ function renderOnlineBadge(isOnline) {
 }
 
 /**
- * Update device select dropdown.
- */
-function updateDeviceSelect(devices) {
-    const select = document.getElementById('ota-device-select');
-    const currentValue = select.value;
-    
-    select.innerHTML = '<option value="">Select Device...</option>';
-    
-    devices.forEach(device => {
-        const option = document.createElement('option');
-        option.value = device.device_id;
-        option.textContent = `${device.device_id} - ${device.firmware_version || 'N/A'}`;
-        select.appendChild(option);
-    });
-    
-    // Restore selection if still valid
-    if (devices.some(d => d.device_id === currentValue)) {
-        select.value = currentValue;
-    }
-}
-
-/**
- * Format datetime string.
+ * Format datetime string to human-readable format.
+ * @param {string} isoString - ISO format datetime string.
+ * @returns {string} Formatted datetime or 'Never' if empty.
  */
 function formatDateTime(isoString) {
-    if (!isoString) return 'Never';
+    if (!isoString) return '<span class="no-data">Never</span>';
     
     try {
         const date = new Date(isoString);
@@ -102,26 +81,13 @@ function formatDateTime(isoString) {
 }
 
 /**
- * Escape HTML to prevent XSS.
+ * Escape HTML to prevent XSS attacks.
+ * @param {string} text - Text to escape.
+ * @returns {string} Escaped text.
  */
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
-}
-
-/**
- * Show error message.
- */
-function showError(message) {
-    alert(message);
-}
-
-/**
- * Quick add to queue from device row.
- */
-function quickAddToQueue(deviceId) {
-    showOtaQueue();
-    document.getElementById('ota-device-select').value = deviceId;
 }

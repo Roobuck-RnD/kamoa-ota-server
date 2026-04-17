@@ -25,6 +25,19 @@ function showOtaQueue() {
     updateNavigation('nav-ota');
     showSection('ota-section');
     refreshOtaQueue();
+    refreshOtaDevices();
+}
+
+// Register WebSocket message handlers
+function registerWebSocketHandlers() {
+    // Register handler for OTA progress updates
+    if (typeof onMessage === 'function') {
+        onMessage('ota_progress', function(data) {
+            if (typeof updateOtaProgress === 'function') {
+                updateOtaProgress(data);
+            }
+        });
+    }
 }
 
 /**
@@ -53,18 +66,30 @@ function showSection(sectionId) {
 async function initApp() {
     console.log('Initializing OTA Server UI...');
     
+    // Initialize toast system
+    if (typeof ToastManager === 'object' && ToastManager.init) {
+        ToastManager.init();
+    }
+    
+    // Initialize WebSocket connection
+    if (typeof initWebSocket === 'function') {
+        initWebSocket();
+    }
+    
+    // Register WebSocket message handlers
+    registerWebSocketHandlers();
+    
     // Initial data load
     await refreshDevices();
     await refreshFirmwareList();
     await refreshOtaQueue();
     await updateHealthStatus();
     
-    // Set up polling for updates
+    // Set up polling for updates (reduced frequency since we have WebSocket)
     setInterval(() => {
         refreshDevices();
-        refreshOtaQueue();
         updateHealthStatus();
-    }, 5000); // Refresh every 5 seconds
+    }, 10000); // Refresh every 10 seconds (WebSocket handles real-time updates)
     
     console.log('OTA Server UI initialized');
 }
