@@ -138,3 +138,17 @@ async function updateOtaQueueStatus(queueId, status, errorMessage = null) {
 async function checkHealth() {
     return apiRequest('/../health');
 }
+
+/**
+ * Firmware Server Config API
+ */
+async function fetchFirmwareServerConfig() {
+    return apiRequest('/config/firmware-server');
+}
+
+async function updateFirmwareServerConfig(config) {
+    return apiRequest('/config/firmware-server', {
+        method: 'POST',
+        body: JSON.stringify(config),
+    });
+}

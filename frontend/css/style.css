@@ -539,3 +539,35 @@ td code {
     border-left: 4px solid #4a90d9;
     padding-left: 10px;
 }
+
+/* ========================================
+   Filter Input Styles
+   ======================================== */
+
+.filter-input {
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    min-width: 300px;
+    transition: all 0.3s ease;
+}
+
+.filter-input:focus {
+    outline: none;
+    border-color: #4a90d9;
+    box-shadow: 0 0 5px rgba(74, 144, 217, 0.3);
+}
+
+.filter-input::placeholder {
+    color: #999;
+    font-style: italic;
+}
+
+/* Responsive filter input */
+@media (max-width: 768px) {
+    .filter-input {
+        min-width: 100%;
+        width: 100%;
+    }
+}

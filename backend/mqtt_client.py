@@ -16,10 +16,12 @@ from .storage import (
     touch_device,
     get_pending_for_device,
     update_queue_status,
+    remove_from_queue,
     get_firmware_path,
     get_config,
     get_firmware_metadata,
     get_queue_item,
+    get_firmware_server_url,
     MqttConfig,
     update_ota_progress,
     clear_ota_progress,
@@ -149,7 +151,7 @@ class MqttClient:
         
         # Check if device is ready for OTA and has pending update
         if status == "ready":
-            print("\n\nREDY TO OTA\n\n")
+            print("\n\nREADY TO OTA\n\n")
             self._check_and_trigger_ota(device_id)
     
     def _handle_device_status(self, device_id: str, payload: str):
@@ -267,9 +269,16 @@ class MqttClient:
             
             # If finished, update queue status
             if finished == 1:
+                # Success - remove from queue
                 update_queue_status(queue_item.id, "completed")
+                remove_from_queue(queue_item.id)
                 clear_ota_progress(device_id)
-                print(f"Device {device_id} OTA finished")
+                print(f"Device {device_id} OTA finished successfully, removed from queue")
+            elif finished == -1:
+                # Failure - reset to pending for retry
+                update_queue_status(queue_item.id, "pending", reason)
+                clear_ota_progress(device_id)
+                print(f"Device {device_id} OTA failed (reason: {reason}), reset to pending for retry")
                 
         except json.JSONDecodeError:
             print(f"Invalid JSON in OTA progress message: {payload}")
@@ -322,9 +331,8 @@ class MqttClient:
             device_id: The target device identifier.
             firmware_filename: Name of the firmware file to send.
         """
-        # Construct HTTP URL to firmware file
-        # Using localhost:8000 as the server address (adjustable via environment)
-        server_url = os.environ.get("SERVER_URL", "http://localhost:18000")
+        # Get firmware server URL from configuration
+        server_url = get_firmware_server_url()
         command = f"{server_url}/firmware/{firmware_filename}"
         topic = f"update/queue/{device_id}"
         self.publish(topic, command, qos=1)

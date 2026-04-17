@@ -8,7 +8,14 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
-from ..storage import get_config, save_config, MqttConfig
+from ..storage import (
+    get_config, 
+    save_config, 
+    MqttConfig,
+    get_firmware_server_config,
+    save_firmware_server_config,
+    FirmwareServerConfig
+)
 from ..mqtt_client import mqtt_client
 
 router = APIRouter(prefix="/api/config", tags=["config"])
@@ -82,3 +89,54 @@ def reconnect_mqtt():
         message="Reconnection successful" if success else "Reconnection failed",
         connected=mqtt_client.is_connected()
     )
+
+
+# ==================== Firmware Server Config ====================
+
+class FirmwareServerConfigResponse(BaseModel):
+    """Firmware server config response."""
+    host: str
+    port: int
+    protocol: str
+
+
+class FirmwareServerConfigUpdate(BaseModel):
+    """Firmware server config update request."""
+    host: str
+    port: int
+    protocol: str = "http"
+
+
+@router.get("/firmware-server", response_model=FirmwareServerConfigResponse)
+def get_firmware_server_config_api():
+    """Get firmware server configuration."""
+    config = get_firmware_server_config()
+    return FirmwareServerConfigResponse(
+        host=config.host,
+        port=config.port,
+        protocol=config.protocol
+    )
+
+
+@router.post("/firmware-server")
+def update_firmware_server_config(config: FirmwareServerConfigUpdate):
+    """
+    Update firmware server configuration.
+    
+    Validates that host is not localhost before saving.
+    """
+    # Validate host is not localhost
+    host_lower = config.host.lower()
+    if host_lower in ("localhost", "127.0.0.1", "::1"):
+        raise HTTPException(
+            status_code=400,
+            detail="Firmware server host cannot be localhost. Please use the actual server IP address."
+        )
+    
+    new_config = FirmwareServerConfig(
+        host=config.host,
+        port=config.port,
+        protocol=config.protocol
+    )
+    save_firmware_server_config(new_config)
+    return {"message": "Firmware server configuration updated successfully"}

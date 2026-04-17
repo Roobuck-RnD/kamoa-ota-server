@@ -5,6 +5,7 @@
  */
 
 let devicesData = [];
+let currentFilterQuery = ''; // Track current filter query
 
 /**
  * Fetch and display device list.
@@ -12,7 +13,12 @@ let devicesData = [];
 async function refreshDevices() {
     try {
         devicesData = await fetchDevices();
-        renderDeviceTable(devicesData);
+        // Reapply filter if one was active
+        if (currentFilterQuery) {
+            filterDevices(currentFilterQuery);
+        } else {
+            renderDeviceTable(devicesData);
+        }
     } catch (error) {
         // showToast('Failed to fetch devices: ' + error.message, ToastType.ERROR);
         renderDeviceTable([]);
@@ -90,4 +96,32 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+/**
+ * Filter devices by device_id or firmware_version.
+ * @param {string} query - Search query string.
+ */
+function filterDevices(query) {
+    currentFilterQuery = query;
+    if (!query) {
+        renderDeviceTable(devicesData);
+        return;
+    }
+    const filtered = devicesData.filter(device => 
+        device.device_id.toLowerCase().includes(query.toLowerCase()) ||
+        (device.firmware_version && device.firmware_version.toLowerCase().includes(query.toLowerCase()))
+    );
+    renderDeviceTable(filtered);
+}
+
+/**
+ * Handle Enter key press on dashboard filter input.
+ * @param {KeyboardEvent} event - Keyboard event.
+ */
+function handleDashboardFilter(event) {
+    if (event.key === 'Enter') {
+        const query = event.target.value.trim();
+        filterDevices(query);
+    }
 }

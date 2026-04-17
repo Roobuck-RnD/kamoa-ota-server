@@ -92,3 +92,57 @@ async function updateHealthStatus() {
         document.getElementById('mqtt-status-text').textContent = 'Error';
     }
 }
+
+// ==================== Firmware Server Config ====================
+
+/**
+ * Load and display current firmware server configuration.
+ */
+async function loadFirmwareServerConfig() {
+    try {
+        const config = await fetchFirmwareServerConfig();
+        
+        document.getElementById('firmware-server-host').value = config.host || '';
+        document.getElementById('firmware-server-port').value = config.port || 18000;
+        document.getElementById('firmware-server-protocol').value = config.protocol || 'http';
+    } catch (error) {
+        console.error('Failed to load firmware server config:', error);
+    }
+}
+
+/**
+ * Save firmware server configuration.
+ */
+async function saveFirmwareServerConfig(event) {
+    event.preventDefault();
+    
+    const host = document.getElementById('firmware-server-host').value.trim();
+    const port = parseInt(document.getElementById('firmware-server-port').value);
+    const protocol = document.getElementById('firmware-server-protocol').value;
+    
+    // Validate host is not localhost
+    const hostLower = host.toLowerCase();
+    if (hostLower === 'localhost' || hostLower === '127.0.0.1' || hostLower === '::1') {
+        showToast('Firmware server host cannot be localhost. Please use the actual server IP address.', ToastType.ERROR);
+        return;
+    }
+    
+    // Validate port
+    if (isNaN(port) || port < 1 || port > 65535) {
+        showToast('Invalid port number. Must be between 1 and 65535.', ToastType.ERROR);
+        return;
+    }
+    
+    const config = {
+        host: host,
+        port: port,
+        protocol: protocol
+    };
+    
+    try {
+        await updateFirmwareServerConfig(config);
+        showToast('Firmware server configuration saved successfully.', ToastType.SUCCESS);
+    } catch (error) {
+        showToast('Failed to save firmware server config: ' + error.message, ToastType.ERROR);
+    }
+}

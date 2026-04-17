@@ -67,6 +67,8 @@ async function refreshFirmwareList() {
     try {
         firmwareList = await fetchFirmwareList();
         renderFirmwareTable(firmwareList);
+        // Also populate global firmware select if on OTA page
+        populateGlobalFirmwareSelect();
     } catch (error) {
         showToast('Failed to fetch firmware list: ' + error.message, ToastType.ERROR);
         renderFirmwareTable([]);
@@ -117,6 +119,22 @@ async function refreshOtaDevices() {
 }
 
 /**
+ * Populate global firmware select dropdown.
+ */
+function populateGlobalFirmwareSelect() {
+    const select = document.getElementById('global-firmware-select');
+    if (!select) return;
+    
+    if (firmwareList.length === 0) {
+        select.innerHTML = '<option value="">No firmware available</option>';
+        return;
+    }
+    
+    select.innerHTML = '<option value="">Select Firmware...</option>' + 
+        firmwareList.map(f => `<option value="${escapeHtml(f.filename)}">${escapeHtml(f.filename)}</option>`).join('');
+}
+
+/**
  * Render devices table on OTA page with queue controls.
  * @param {Array} devices - List of device objects.
  */
@@ -124,14 +142,9 @@ function renderOtaDevicesTable(devices) {
     const tbody = document.getElementById('ota-devices-body');
     
     if (!devices || devices.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No devices found. Devices will appear here when they connect via MQTT.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No devices found. Devices will appear here when they connect via MQTT.</td></tr>';
         return;
     }
-    
-    // Build firmware options
-    const firmwareOptions = firmwareList.length > 0 
-        ? firmwareList.map(f => `<option value="${escapeHtml(f.filename)}">${escapeHtml(f.filename)}</option>`).join('')
-        : '<option value="">No firmware available</option>';
     
     tbody.innerHTML = devices.map(device => {
         // Check if device is already in queue
@@ -144,12 +157,6 @@ function renderOtaDevicesTable(devices) {
                 <td>${device.ip_address || '<span class="no-data">-</span>'}</td>
                 <td>${device.firmware_version || '<span class="no-data">-</span>'}</td>
                 <td>${device.is_online ? '<span class="status-badge online">Online</span>' : '<span class="status-badge offline">Offline</span>'}</td>
-                <td>
-                    <select id="firmware-select-${escapeHtml(device.device_id)}" class="firmware-select">
-                        <option value="">Select Firmware...</option>
-                        ${firmwareOptions}
-                    </select>
-                </td>
                 <td>
                     ${isInQueue 
                         ? `<button class="btn btn-warning btn-small" onclick="toggleDeviceInQueue('${escapeHtml(device.device_id)}', 'remove')">Remove from Queue</button>`
@@ -168,12 +175,12 @@ function renderOtaDevicesTable(devices) {
  */
 async function toggleDeviceInQueue(deviceId, action) {
     if (action === 'add') {
-        // Get selected firmware for this device
-        const firmwareSelect = document.getElementById(`firmware-select-${deviceId}`);
-        const firmwareFilename = firmwareSelect.value;
+        // Get selected firmware from global dropdown
+        const globalFirmwareSelect = document.getElementById('global-firmware-select');
+        const firmwareFilename = globalFirmwareSelect ? globalFirmwareSelect.value : '';
         
         if (!firmwareFilename) {
-            showToast('Please select a firmware file for this device.', ToastType.ERROR);
+            showToast('Please select a firmware file from the global dropdown.', ToastType.ERROR);
             return;
         }
         
@@ -235,7 +242,14 @@ function renderOtaQueueTable(queue) {
         const progressData = otaProgressData[item.id];
         const progressHtml = renderProgressCell(item, progressData);
         const actionHtml = item.status === 'pending' 
-            ? `<button class="btn btn-danger btn-small" onclick="removeFromQueue(${item.id})">Remove</button>` 
+            ? `
+                <button class="btn btn-success btn-small" onclick="forceStartOta('${escapeHtml(item.device_id)}', ${item.id})">
+                    Force Start
+                </button>
+                <button class="btn btn-danger btn-small" onclick="removeFromQueue(${item.id})">
+                    Remove
+                </button>
+            ` 
             : '<span class="no-data">-</span>';
         
         return `
@@ -316,6 +330,29 @@ function updateOtaProgress(data) {
 }
 
 /**
+ * Force start OTA for a device.
+ * @param {string} deviceId - The device ID to force start OTA for.
+ * @param {number} queueId - The queue item ID (for refreshing after action).
+ */
+async function forceStartOta(deviceId, queueId) {
+    if (!confirm(`Force start OTA for device ${deviceId}? This will immediately send the OTA command to the device.`)) {
+        return;
+    }
+    
+    try {
+        await apiRequest(`/ota/force-start/${deviceId}`, {
+            method: 'POST',
+        });
+        
+        showToast('OTA force started successfully.', ToastType.SUCCESS);
+        // Refresh queue to update status
+        await refreshOtaQueue();
+    } catch (error) {
+        showToast('Failed to force start OTA: ' + error.message, ToastType.ERROR);
+    }
+}
+
+/**
  * Remove item from queue by ID.
  * @param {number} queueId - The queue item ID to remove.
  */
@@ -386,4 +423,58 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+/**
+ * Filter OTA devices by device_id or firmware_version.
+ * @param {string} query - Search query string.
+ */
+function filterOtaDevices(query) {
+    if (!query) {
+        renderOtaDevicesTable(devicesList);
+        return;
+    }
+    const filtered = devicesList.filter(device => 
+        device.device_id.toLowerCase().includes(query.toLowerCase()) ||
+        (device.firmware_version && device.firmware_version.toLowerCase().includes(query.toLowerCase()))
+    );
+    renderOtaDevicesTable(filtered);
+}
+
+/**
+ * Filter OTA queue by device_id or firmware_filename.
+ * @param {string} query - Search query string.
+ */
+function filterOtaQueue(query) {
+    if (!query) {
+        renderOtaQueueTable(otaQueue);
+        return;
+    }
+    const filtered = otaQueue.filter(item => 
+        item.device_id.toLowerCase().includes(query.toLowerCase()) ||
+        (item.firmware_filename && item.firmware_filename.toLowerCase().includes(query.toLowerCase()))
+    );
+    renderOtaQueueTable(filtered);
+}
+
+/**
+ * Handle Enter key press on OTA devices filter input.
+ * @param {KeyboardEvent} event - Keyboard event.
+ */
+function handleOtaDevicesFilter(event) {
+    if (event.key === 'Enter') {
+        const query = event.target.value.trim();
+        filterOtaDevices(query);
+    }
+}
+
+/**
+ * Handle Enter key press on OTA queue filter input.
+ * @param {KeyboardEvent} event - Keyboard event.
+ */
+function handleOtaQueueFilter(event) {
+    if (event.key === 'Enter') {
+        const query = event.target.value.trim();
+        filterOtaQueue(query);
+    }
 }

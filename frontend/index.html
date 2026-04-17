@@ -29,6 +29,7 @@
         <section id="dashboard-section" class="section active">
             <h2>Devices</h2>
             <div class="controls">
+                <input type="text" id="dashboard-filter" class="filter-input" placeholder="Filter by Device ID or Firmware Version (press Enter)" onkeypress="handleDashboardFilter(event)">
                 <button onclick="refreshDevices()" class="btn btn-primary">Refresh Devices</button>
             </div>
             <div class="table-container">
@@ -71,7 +72,29 @@
                     <label for="mqtt-password">Password (optional):</label>
                     <input type="password" id="mqtt-password" name="password" placeholder="mqtt_password">
                 </div>
-                <button type="submit" class="btn btn-primary">Save Configuration</button>
+                <button type="submit" class="btn btn-primary">Save MQTT Configuration</button>
+            </form>
+            
+            <h3 style="margin-top: 30px;">Firmware Server Settings</h3>
+            <p style="color: #666; margin-bottom: 15px;">Configure the server URL that devices will use to download firmware updates. This should be the external IP/hostname accessible by your devices.</p>
+            <form id="firmware-server-form" onsubmit="saveFirmwareServerConfig(event)">
+                <div class="form-group">
+                    <label for="firmware-server-protocol">Protocol:</label>
+                    <select id="firmware-server-protocol" name="protocol" required>
+                        <option value="http">HTTP</option>
+                        <option value="https">HTTPS</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="firmware-server-host">Server Host/IP:</label>
+                    <input type="text" id="firmware-server-host" name="host" required placeholder="192.168.1.100" style="min-width: 200px;">
+                    <small style="color: #dc3545;">Cannot be localhost - must be accessible by devices</small>
+                </div>
+                <div class="form-group">
+                    <label for="firmware-server-port">Port:</label>
+                    <input type="number" id="firmware-server-port" name="port" required placeholder="18000" min="1" max="65535" style="min-width: 150px;">
+                </div>
+                <button type="submit" class="btn btn-primary">Save Firmware Server Configuration</button>
             </form>
         </section>
 
@@ -104,28 +127,11 @@
         <section id="ota-section" class="section">
             <h2>OTA Update Queue</h2>
             
-            <!-- Devices table with add/remove queue buttons -->
-            <h3>Available Devices</h3>
-            <div class="table-container">
-                <table id="ota-devices-table">
-                    <thead>
-                        <tr>
-                            <th>Device ID</th>
-                            <th>IP Address</th>
-                            <th>Firmware Version</th>
-                            <th>Online</th>
-                            <th>Select Firmware</th>
-                            <th>Queue Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ota-devices-body">
-                        <tr><td colspan="6">Loading...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- Current queue items -->
+            <!-- Update Queue table (moved to top) -->
             <h3>Update Queue</h3>
+            <div class="controls">
+                <input type="text" id="ota-queue-filter" class="filter-input" placeholder="Filter Queue by Device ID or Firmware (press Enter)" onkeypress="handleOtaQueueFilter(event)">
+            </div>
             <div class="table-container">
                 <table id="ota-queue-table">
                      <thead>
@@ -142,6 +148,32 @@
                      <tbody id="ota-queue-body">
                          <tr><td colspan="7">No items in queue</td></tr>
                      </tbody>
+                </table>
+            </div>
+            
+            <!-- Devices table with add/remove queue buttons -->
+            <h3>Available Devices</h3>
+            <div class="controls">
+                <input type="text" id="ota-devices-filter" class="filter-input" placeholder="Filter Devices by Device ID or Firmware (press Enter)" onkeypress="handleOtaDevicesFilter(event)">
+                <label for="global-firmware-select">Select Firmware for Queue:</label>
+                <select id="global-firmware-select" class="firmware-select">
+                    <option value="">Select Firmware...</option>
+                </select>
+            </div>
+            <div class="table-container">
+                <table id="ota-devices-table">
+                    <thead>
+                        <tr>
+                            <th>Device ID</th>
+                            <th>IP Address</th>
+                            <th>Firmware Version</th>
+                            <th>Online</th>
+                            <th>Queue Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ota-devices-body">
+                        <tr><td colspan="5">Loading...</td></tr>
+                    </tbody>
                 </table>
             </div>
         </section>

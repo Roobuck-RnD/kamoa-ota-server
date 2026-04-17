@@ -13,6 +13,7 @@ function showSettings() {
     updateNavigation('nav-settings');
     showSection('settings-section');
     loadMqttConfig();
+    loadFirmwareServerConfig();
 }
 
 function showFirmware() {
@@ -26,6 +27,8 @@ function showOtaQueue() {
     showSection('ota-section');
     refreshOtaQueue();
     refreshOtaDevices();
+    // Populate global firmware select dropdown
+    populateGlobalFirmwareSelect();
 }
 
 // Register WebSocket message handlers

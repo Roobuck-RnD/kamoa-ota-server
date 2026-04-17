@@ -309,6 +309,55 @@ class MqttConfig(BaseModel):
     password: Optional[str] = None
 
 
+class FirmwareServerConfig(BaseModel):
+    """Configuration for the firmware server URL used in OTA commands."""
+    host: str
+    port: int
+    protocol: str = "http"  # http or https
+
+
+FIRMWARE_SERVER_CONFIG_FILE = DATA_DIR / "firmware_server_config.json"
+
+
+def get_firmware_server_config() -> FirmwareServerConfig:
+    """
+    Get firmware server configuration from file or return defaults.
+    
+    Returns:
+        FirmwareServerConfig: Current firmware server configuration.
+    """
+    if FIRMWARE_SERVER_CONFIG_FILE.exists():
+        data = _load_json(FIRMWARE_SERVER_CONFIG_FILE, {
+            "host": "localhost",
+            "port": 18000,
+            "protocol": "http"
+        })
+        return FirmwareServerConfig(**data)
+    else:
+        # Return default configuration
+        return FirmwareServerConfig(
+            host="localhost",
+            port=18000,
+            protocol="http"
+        )
+
+
+def save_firmware_server_config(config: FirmwareServerConfig) -> None:
+    """Save firmware server configuration."""
+    _save_json(FIRMWARE_SERVER_CONFIG_FILE, config.model_dump())
+
+
+def get_firmware_server_url() -> str:
+    """
+    Get the full firmware server URL.
+    
+    Returns:
+        str: Full URL like "http://192.168.1.100:18000"
+    """
+    config = get_firmware_server_config()
+    return f"{config.protocol}://{config.host}:{config.port}"
+
+
 # ==================== OTA Progress Tracking ====================
 
 class OtaProgress(BaseModel):

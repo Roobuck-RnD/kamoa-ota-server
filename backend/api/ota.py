@@ -18,8 +18,10 @@ from ..storage import (
     get_queue_item,
     update_queue_status,
     get_device,
+    get_pending_for_device,
     OtaQueueItem
 )
+from ..mqtt_client import mqtt_client
 
 router = APIRouter(prefix="/api/ota", tags=["ota"])
 
@@ -148,3 +150,54 @@ def update_queue_item_status(queue_id: int, request: OtaQueueStatusUpdate):
     if not item:
         raise HTTPException(status_code=404, detail=f"Queue item {queue_id} not found")
     return item
+
+
+class ForceStartRequest(BaseModel):
+    """Request model for force starting OTA.
+    
+    Attributes:
+        device_id: Unique identifier of the device to force start OTA for.
+    """
+    device_id: str
+
+
+@router.post("/force-start/{device_id}")
+def force_start_ota(device_id: str):
+    """
+    Force start OTA for a device immediately.
+    
+    This simulates the device sending "ready" status, which will trigger
+    the OTA process if the device has a pending queue item.
+    
+    Args:
+        device_id: The unique identifier of the device.
+        
+    Returns:
+        dict: Success message with queue item info.
+        
+    Raises:
+        HTTPException: 404 if device not found or no pending queue item.
+    """
+    # Verify device exists
+    device = get_device(device_id)
+    if not device:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Device {device_id} not found"
+        )
+    
+    # Check for pending queue item
+    queue_item = get_pending_for_device(device_id)
+    if not queue_item:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No pending OTA queue item found for device {device_id}"
+        )
+    
+    # Trigger OTA by calling the same method used when device sends "ready"
+    mqtt_client._check_and_trigger_ota(device_id)
+    
+    return {
+        "message": f"OTA force started for device {device_id}",
+        "queue_item": queue_item
+    }
