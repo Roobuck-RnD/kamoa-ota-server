@@ -50,7 +50,7 @@
                         </tr>
                     </thead>
                     <tbody id="devices-body">
-                        <tr><td colspan="7">Loading...</td></tr>
+                        <tr><td colspan="6">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -80,7 +80,7 @@
             </form>
             
             <h3 style="margin-top: 30px;">Firmware Server Settings</h3>
-            <p style="color: #666; margin-bottom: 15px;">Configure the server URL that devices will use to download firmware updates. This should be the external IP/hostname accessible by your devices.</p>
+            <p class="text-muted" style="margin-bottom: 15px;">Configure the server URL that devices will use to download firmware updates. This should be the external IP/hostname accessible by your devices.</p>
             <form id="firmware-server-form" onsubmit="saveFirmwareServerConfig(event)">
                 <div class="form-group">
                     <label for="firmware-server-protocol">Protocol:</label>
@@ -92,7 +92,7 @@
                 <div class="form-group">
                     <label for="firmware-server-host">Server Host/IP:</label>
                     <input type="text" id="firmware-server-host" name="host" required placeholder="192.168.1.100" style="min-width: 200px;">
-                    <small style="color: #dc3545;">Cannot be localhost - must be accessible by devices</small>
+                    <small class="text-danger">Cannot be localhost - must be accessible by devices</small>
                 </div>
                 <div class="form-group">
                     <label for="firmware-server-port">Port:</label>
